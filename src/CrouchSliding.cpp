@@ -10,6 +10,8 @@
 #include "_References/Compatibility.h"
 #include "_References/CustomBlockingVars.h"
 
+#include "Util/ParkourRequirements.h"
+
 namespace CrouchSliding
 {
 
@@ -78,6 +80,8 @@ namespace CrouchSliding
 
         if (ModSettings::Land_Rolling_Enabled && midair && fallTime >= 0.5f)
         {
+            if (!ParkourRequirements::MeetsLandingRollRequirement(actor)) return false;
+
             const auto downRay = [actor] {
                 constexpr RE::NiPoint3 downDir{0, 0, -1};
                 constexpr float dist = 100.f;
@@ -108,6 +112,7 @@ namespace CrouchSliding
         else
         {
             if (!ModSettings::Crouch_Slide_Enabled) return false;
+            if (!ParkourRequirements::MeetsSlideRequirement(actor)) return false;
             if (isHoldingKey) return false;
             if (fallTime > 0.2f) return false;
             if (!sprinting) return false;

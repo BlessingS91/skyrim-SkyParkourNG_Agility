@@ -15,6 +15,8 @@
 
 #include "HUD/Scaleform/SkyParkourMenu.hpp"
 
+#include "Util/ParkourRequirements.h"
+
 static std::mutex g_ParkourActivateLock;
 
 using namespace ParkourUtility;
@@ -29,7 +31,6 @@ ParkourType Parkouring::GetLedgePoint(RayCastResult &out_LedgeRay)
     const auto player = GET_PLAYER;
     const auto facingDir = GetActorDirFlat(player);
     const auto scale = RuntimeVariables::PlayerScale = ScaleUtility::GetScale(player);
-
     // Perform ledge or vault checks
     pt selectedLedgeType = pt::NoLedge;
 
@@ -40,10 +41,15 @@ ParkourType Parkouring::GetLedgePoint(RayCastResult &out_LedgeRay)
     if (selectedLedgeType == pt::NoLedge)
     {
         selectedLedgeType = ClimbCheck(ledgePoint, facingDir, hv::climbMinHeight * scale, hv::climbMaxHeight * scale, out_LedgeRay);
+
+        if (selectedLedgeType != pt::NoLedge && selectedLedgeType != pt::Failed &&
+            !ParkourRequirements::MeetsRequirement(player, selectedLedgeType))
+        {
+            selectedLedgeType = pt::NoLedge;
+        }
     }
 
     if (selectedLedgeType == pt::NoLedge) return pt::NoLedge;
-
     // Don't ever parkour into water, last check before saying this ledge is valid
     float waterLevel{-200000.0f};
     auto parentCell = player->GetParentCell();
