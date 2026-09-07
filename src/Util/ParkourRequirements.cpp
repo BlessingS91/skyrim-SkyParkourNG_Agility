@@ -4,6 +4,14 @@
 
 namespace ParkourRequirements
 {
+
+    constexpr std::uint32_t kDebugToggle = 0x90D;
+    constexpr auto kDebugPlugin = "Agility - an Adamant addon.esp";
+
+    RE::TESGlobal *g_debugToggle{nullptr};
+
+    bool IsDebugLoggingEnabled() { return g_debugToggle && g_debugToggle->value != 0.0f; }
+
     namespace
     {
         constexpr std::size_t RequirementCount = static_cast<std::size_t>(ParkourType::Highest) + 1;
@@ -12,7 +20,6 @@ namespace ParkourRequirements
         Requirement g_slideRequirement{};
         Requirement g_landingRollRequirement{};
 
-        bool g_debugLogging{false};
         RE::ActorValue g_skillType{RE::ActorValue::kSneak};
 
         std::size_t ToIndex(ParkourType type) { return static_cast<std::size_t>(type); }
@@ -162,7 +169,7 @@ namespace ParkourRequirements
         {
             if (!actor)
             {
-                if (g_debugLogging)
+                if (IsDebugLoggingEnabled())
                 {
                     logger::error("ParkourRequirements: MeetsRequirementInternal() received NULL actor");
                 }
@@ -170,7 +177,7 @@ namespace ParkourRequirements
                 return false;
             }
 
-            if (g_debugLogging)
+            if (IsDebugLoggingEnabled())
             {
                 logger::info(
                     "ParkourRequirements: Checking [{}] | Actor={:08X} | Level={:.1f} | "
@@ -187,7 +194,7 @@ namespace ParkourRequirements
             {
                 if (!requirement.perk)
                 {
-                    if (g_debugLogging)
+                    if (IsDebugLoggingEnabled())
                     {
                         logger::warn("ParkourRequirements: [{}] FAIL - perk configured but not resolved", name);
                     }
@@ -197,7 +204,7 @@ namespace ParkourRequirements
 
                 const bool hasPerk = actor->HasPerk(requirement.perk);
 
-                if (g_debugLogging)
+                if (IsDebugLoggingEnabled())
                 {
                     logger::info("ParkourRequirements: [{}] HasPerk={} -> {}", name, hasPerk, hasPerk ? "PASS" : "FAIL");
                 }
@@ -213,7 +220,7 @@ namespace ParkourRequirements
 
             if (!avOwner)
             {
-                if (g_debugLogging)
+                if (IsDebugLoggingEnabled())
                 {
                     logger::error("ParkourRequirements: [{}] ActorValueOwner is NULL", name);
                 }
@@ -225,7 +232,7 @@ namespace ParkourRequirements
 
             const bool meetsLevel = skill >= requirement.level;
 
-            if (g_debugLogging)
+            if (IsDebugLoggingEnabled())
             {
                 logger::info("ParkourRequirements: [{}] Skill={:.1f} Required={:.1f} -> {}", name, skill, requirement.level,
                              meetsLevel ? "PASS" : "FAIL");
@@ -253,16 +260,11 @@ namespace ParkourRequirements
             return;
         }
 
-        // Debug setting
-        g_debugLogging = ini.GetBoolValue("Debug", "EnableLogging", false);
-
         const char *skillType = ini.GetValue("Settings", "SkillType", "Sneak");
 
         g_skillType = ParseSkillType(skillType);
 
         logger::info("ParkourRequirements: Skill type = '{}'", skillType);
-
-        logger::info("ParkourRequirements: Debug logging = {}", g_debugLogging ? "ON" : "OFF");
 
         LoadRequirement(ini, g_requirements[ToIndex(ParkourType::Highest)], "ParkourRequirements.Highest");
 
@@ -294,23 +296,30 @@ namespace ParkourRequirements
         logger::info("ParkourRequirements: Resolving perks...");
 
         auto *dataHandler = RE::TESDataHandler::GetSingleton();
-
         if (!dataHandler)
         {
             logger::error("ParkourRequirements: TESDataHandler unavailable");
-
             return;
+        }
+
+        g_debugToggle = skyrim_cast<RE::TESGlobal *>(dataHandler->LookupForm(kDebugToggle, kDebugPlugin));
+
+        if (!g_debugToggle)
+        {
+            logger::warn("ParkourRequirements: Debug toggle not found | {} | {:08X}", kDebugPlugin, kDebugToggle);
+        }
+        else
+        {
+            logger::info("ParkourRequirements: Debug toggle resolved | Value={:.1f}", g_debugToggle->value);
         }
 
         for (std::size_t i = ToIndex(ParkourType::Grab); i < RequirementCount; ++i)
         {
             const auto type = static_cast<ParkourType>(i);
-
             ResolvePerk(g_requirements[i], GetTypeName(type));
         }
 
         ResolvePerk(g_slideRequirement, "Slide");
-
         ResolvePerk(g_landingRollRequirement, "LandingRoll");
 
         logger::info("ParkourRequirements: Perk resolution complete");
@@ -322,7 +331,7 @@ namespace ParkourRequirements
 
         if (index >= RequirementCount)
         {
-            if (g_debugLogging)
+            if (IsDebugLoggingEnabled())
             {
                 logger::error("ParkourRequirements: MeetsRequirement() invalid type={} index={} count={}", GetTypeName(type), index,
                               RequirementCount);
@@ -344,7 +353,7 @@ namespace ParkourRequirements
 
         if (index >= RequirementCount)
         {
-            if (g_debugLogging)
+            if (IsDebugLoggingEnabled())
             {
                 logger::error("ParkourRequirements: GetRequirement() invalid type={} index={} count={}", GetTypeName(type), index,
                               RequirementCount);

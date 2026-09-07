@@ -14,6 +14,8 @@
 #include "API/API_Handles.h"
 #include "HUD/Scaleform/SkyParkourMenu.hpp"
 
+#include "Util/ParkourRequirements.h"
+
 void Install_Hooks_And_Listeners()
 {
     // RaceChangeListener::Register(); // Not needed, post graph create includes this
@@ -65,6 +67,7 @@ void MessageEvent(SKSE::MessagingInterface::Message *message)
         RuntimeMethods::SetupDLLCompatibility();
 
         SkyParkourINI::Read_All_MCM_From_INI_and_Cache_Settings();
+
         if (!API_Handles::RequestAllHandles()) WARN("Some API handles not registered");
         if (!CustomBlockingVars::ReadAndCacheVars()) WARN("No custom rule file found, skipping");
     }
@@ -73,6 +76,8 @@ void MessageEvent(SKSE::MessagingInterface::Message *message)
         RuntimeMethods::SetupESPCompatibility();
         Install_Hooks_And_Listeners();
         ModSettingsMenu::Register();
+
+        ParkourRequirements::Load();
 
         INFO("|>_SkyParkour Loaded_<|");
     }
